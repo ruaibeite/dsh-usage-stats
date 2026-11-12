@@ -1,0 +1,5 @@
+# dsh-usage-stats bundle patch: inserts this plugin's host row into a profile's
+# layer stack. The browser half is declared by package.json `dsh.client`.
+- insert:
+    - id: usage-stats
+      name: '@ruaibeite/dsh-usage-stats'

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Usage stats: three ascending token bars under a rising line with a peak dot">
+  <title>Usage stats</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2d50"/>
+      <stop offset="1" stop-color="#0c1424"/>
+    </linearGradient>
+    <radialGradient id="peakGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#tile)"/>
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="13.25" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1.5"/>
+
+  <!-- baseline -->
+  <path d="M12 51.5H52" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="1.6" stroke-linecap="round"/>
+
+  <!-- three ascending bars: chat, cowork, code -->
+  <rect x="12" y="37.5" width="8" height="14" rx="2.4" fill="#7aaaff"/>
+  <rect x="25.5" y="29.5" width="8" height="22" rx="2.4" fill="#f7ad31"/>
+  <rect x="39" y="20.5" width="8" height="31" rx="2.4" fill="#4ed17e"/>
+
+  <!-- rising line above the bars, peaking past the tallest one -->
+  <path d="M15.5 33.5L29 25L41 17L50 13.5" fill="none" stroke="#e8eefc" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- peak point -->
+  <circle cx="50" cy="13.5" r="6.5" fill="url(#peakGlow)"/>
+  <circle cx="50" cy="13.5" r="2.5" fill="#ffffff"/>
+</svg>

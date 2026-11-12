@@ -1,0 +1,61 @@
+{
+  "name": "@ruaibeite/dsh-usage-stats",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Device-wide token usage for this Harness: Chat/Cowork/Code cards, tokens per day, and a per-model breakdown, folded from the local session logs on the settings Usage page.",
+  "license": "MIT",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "screenshots.json",
+    "assets/icon-180.png",
+    "assets/screenshot-*.png",
+    "LICENSE",
+    "README.md",
+    "README.zh.md",
+    "test/"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-general"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "usage",
+    "tokens",
+    "statistics",
+    "dashboard"
+  ],
+  "scripts": {
+    "test": "node test/host.mjs && node test/render.mjs"
+  },
+  "author": "ruaibeite",
+  "homepage": "https://github.com/ruaibeite/dsh-usage-stats#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruaibeite/dsh-usage-stats.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ruaibeite/dsh-usage-stats/issues"
+  }
+}
