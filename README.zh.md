@@ -12,11 +12,11 @@
 
 ## 截图
 
-![用量页浅色主题：三张场景卡片与每日 Token 图](assets/screenshot-usage-light.png)
+![用量页浅色主题：两张场景卡片与每日 Token 图](assets/screenshot-usage-light.png)
 
 ![用量页模型分组：按模型堆叠图与按模型明细表](assets/screenshot-usage-models.png)
 
-![用量页深色主题：三张场景卡片与每日 Token 图](assets/screenshot-usage-dark.png)
+![用量页深色主题：两张场景卡片与每日 Token 图](assets/screenshot-usage-dark.png)
 
 ## 页面内容
 

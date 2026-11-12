@@ -12,11 +12,11 @@ Everything on the page is derived from session logs DeepSeek Harness records any
 
 ## Screenshots
 
-![Usage page in light theme: three scene cards and the daily token chart](assets/screenshot-usage-light.png)
+![Usage page in light theme: two scene cards and the daily token chart](assets/screenshot-usage-light.png)
 
 ![Usage page with the model grouping: stacked model chart and the per-model table](assets/screenshot-usage-models.png)
 
-![Usage page in dark theme: three scene cards and the daily token chart](assets/screenshot-usage-dark.png)
+![Usage page in dark theme: two scene cards and the daily token chart](assets/screenshot-usage-dark.png)
 
 ## What you get
 
