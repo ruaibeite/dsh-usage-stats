@@ -419,7 +419,7 @@ function loadWithContext(options = {}) {
 
 // ------------------------------------------------------------- fixtures
 
-const CATEGORIES = ['chat', 'cowork', 'code']
+const CATEGORIES = ['chat', 'code']
 const MODEL_NAMES = [
   'deepseek-v4.1-flash',
   'qwen4-max-preview',
@@ -440,8 +440,7 @@ const DEFAULT_MODEL_IOS = [448000, 168000, 55000]
 /** Category buckets per day; they add up to 671 000 input+output tokens a day. */
 const CATEGORY_PER_DAY = {
   chat: { input: 900, output: 100, cacheRead: 300000, cacheWrite: 0, web: 1, sessions: 1 },
-  cowork: { input: 100000, output: 20000, cacheRead: 0, cacheWrite: 0, web: 2, sessions: 2 },
-  code: { input: 500000, output: 50000, cacheRead: 0, cacheWrite: 1000, web: 3, sessions: 3 },
+  code: { input: 600000, output: 70000, cacheRead: 0, cacheWrite: 1000, web: 5, sessions: 5 },
 }
 const LAST_DAY = Date.UTC(2026, 10, 12) // 2026-11-12, matches the real sample
 const DAY_MS = 86400000
@@ -817,12 +816,12 @@ await test('aggregateSeries fills missing categories and respects the model cap'
   ]
   const category = aggregateSeries(bareDaily, 'category')
   assert.deepEqual([...category.days], ['2026-11-01', '2026-11-02'])
-  assert.deepEqual([...category.series].map((entry) => entry.key), ['chat', 'cowork', 'code'])
+  assert.deepEqual([...category.series].map((entry) => entry.key), ['chat', 'code'])
   assert.deepEqual([...category.series[0].values], [11, 22])
-  assert.deepEqual([...category.series[1].values], [0, 10])
-  assert.deepEqual([...category.series[2].values], [0, 0])
-  assert.equal(category.total, 43)
-  assert.equal(category.max, 32)
+  // A `cowork` bucket in an older payload is ignored, not counted.
+  assert.deepEqual([...category.series[1].values], [0, 0])
+  assert.equal(category.total, 33)
+  assert.equal(category.max, 22)
 
   const modelIos = [448000, 168000, 20000, 15000, 10000, 5000, 3000, 2000]
   const report = makeReport(30, { modelIos })
@@ -850,8 +849,7 @@ await test('cacheHitRatio, series labels/colors and textOf behave', () => {
   assert.equal(model.seriesLabel(tr, 'deepseek-v4.1-flash'), 'deepseek-v4.1-flash')
 
   assert.equal(model.seriesColor('chat', 0, 'category'), 'var(--dsw-alias-state-business-primary, #4176e6)')
-  assert.equal(model.seriesColor('cowork', 1, 'category'), 'var(--dsw-alias-state-warn-primary, #f59e0b)')
-  assert.equal(model.seriesColor('code', 2, 'category'), 'var(--dsw-alias-state-success-primary, #22c55e)')
+  assert.equal(model.seriesColor('code', 1, 'category'), 'var(--dsw-alias-state-success-primary, #22c55e)')
   assert.equal(model.seriesColor('m0', 0, 'model'), 'var(--dsw-alias-state-business-primary, #4176e6)')
   assert.notEqual(model.seriesColor('m0', 0, 'model'), model.seriesColor('m1', 1, 'model'))
 
@@ -875,14 +873,14 @@ await test('loading state shows skeleton cards, spinner and the scan hint', asyn
   assert.ok(out.contains('首次打开需要扫描本机会话日志'))
   assert.ok(out.classSet.has('us-spinner'))
   assert.ok(out.classSet.has('us-loading'))
-  assert.equal(out.byClass('us-skeleton-card').length, 3)
+  assert.equal(out.byClass('us-skeleton-card').length, 2)
   assert.equal(out.byClass('us-skeleton-chart').length, 1)
   assert.equal(out.byClass('us-card').length, 0)
   assert.equal(out.byClass('us-chart-svg').length, 0)
   out.unmount()
 })
 
-await test('data state renders title, chips, three scene cards with exact rows', async () => {
+await test('data state renders title, chips, two scene cards with exact rows', async () => {
   const load = loadClient({ fetchImpl: fetchByDays() })
   const out = await mount(load, load.model.UsageSection, { t: undefined })
   assert.equal(out.dataValue('loading'), '0')
@@ -893,22 +891,20 @@ await test('data state renders title, chips, three scene cards with exact rows',
   assert.ok(out.contains('缓存命中率 33.3%'), 'cache hit ratio')
 
   const cards = out.byClass('us-card')
-  assert.equal(cards.length, 3)
-  assert.deepEqual(out.dataValues('data-cat'), ['chat', 'cowork', 'code'])
+  assert.equal(cards.length, 2)
+  assert.deepEqual(out.dataValues('data-cat'), ['chat', 'code'])
   const ioByCategory = out.byClass('us-card-big').map((node) => node.props['data-io'])
-  assert.deepEqual(ioByCategory, ['30000', '3600000', '16500000'])
+  assert.deepEqual(ioByCategory, ['30000', '20100000'])
   const bigNumbers = out.byClass('us-card-big').map((node) => node.children.join(''))
-  assert.deepEqual(bigNumbers, ['30K', '3.6M', '16.5M'])
-  assert.equal(out.byClass('us-card-hint').length, 3)
-  assert.ok(out.contains('纯对话'))
-  assert.ok(out.contains('Agent Teams'))
+  assert.deepEqual(bigNumbers, ['30K', '20.1M'])
+  assert.equal(out.byClass('us-card-hint').length, 2)
+  assert.ok(out.contains('对话'))
   assert.ok(out.contains('代码执行'))
-  assert.equal(out.byClass('us-row').length, 12)
+  assert.equal(out.byClass('us-row').length, 8)
   const labels = out.byClass('us-row-label').map((node) => node.children.join(''))
   for (const label of ['未缓存输入', '输出', '缓存读', '缓存写']) assert.ok(labels.includes(label), 'missing row ' + label)
   assert.ok(out.contains('30 次联网搜索'))
-  assert.ok(out.contains('60 次联网搜索'))
-  assert.ok(out.contains('90 次联网搜索'))
+  assert.ok(out.contains('150 次联网搜索'))
   assert.ok(out.contains('服务商账单覆盖整个组织并计入缓存 token'))
   assert.ok(out.contains('由本机会话日志推导'))
   assert.ok(out.contains('已索引 31 个会话'))
@@ -925,13 +921,13 @@ await test('scene chart has grouped bars, legend, axis and consistent totals', a
   assert.equal(wraps.length, 1)
   assert.equal(wraps[0].props['data-total'], '20130000')
   const series = wraps[0].props['data-series']
-  assert.match(series, /^chat=30000,cowork=3600000,code=16500000$/)
+  assert.match(series, /^chat=30000,code=20100000$/)
   const legend = out.byClass('us-legend-item').map(out.textOf)
-  assert.deepEqual(legend, ['Chat', 'Cowork', 'Code'])
-  // 30 days x 3 scene bars, plus one hover overlay per day.
+  assert.deepEqual(legend, ['Chat', 'Code'])
+  // 30 days x 2 scene bars, plus one hover overlay per day.
   const bars = out.nodes.filter((node) => node.tag === 'rect' && node.props.fill === 'var(--dsw-alias-state-business-primary, #4176e6)')
   assert.equal(bars.length, 30)
-  assert.equal(out.byClass('us-dot').length, 3)
+  assert.equal(out.byClass('us-dot').length, 2)
   assert.ok(out.contains('每日 Token'))
   assert.ok(out.contains('最近 30 天，按场景统计的输入与输出 token'))
   assert.equal(out.byClass('us-empty').length, 0)
@@ -989,7 +985,7 @@ await test('7/30/90 switch refetches the right range and refreshes the numbers',
   assert.equal(next.dataValue('days'), '7')
   assert.equal(load.fetchCalls[load.fetchCalls.length - 1].url, '/dsh-usage-stats/report?days=7')
   assert.equal(next.byClass('us-chart-wrap')[0].props['data-total'], '4697000')
-  assert.deepEqual(next.byClass('us-card-big').map((node) => node.props['data-io']), ['7000', '840000', '3850000'])
+  assert.deepEqual(next.byClass('us-card-big').map((node) => node.props['data-io']), ['7000', '4690000'])
   assert.ok(next.contains('最近 7 天，按场景统计的输入与输出 token'))
   assert.deepEqual(next.buttons.filter((button) => ['7', '30', '90'].includes(button.props['data-value'])).map((button) => button.props['aria-pressed']), ['true', 'false', 'false'])
 
@@ -998,7 +994,7 @@ await test('7/30/90 switch refetches the right range and refreshes the numbers',
   assert.equal(next.dataValue('days'), '90')
   assert.equal(load.fetchCalls[load.fetchCalls.length - 1].url, '/dsh-usage-stats/report?days=90')
   assert.equal(next.byClass('us-chart-wrap')[0].props['data-total'], '60390000')
-  assert.deepEqual(next.byClass('us-card-big').map((node) => node.props['data-io']), ['90000', '10800000', '49500000'])
+  assert.deepEqual(next.byClass('us-card-big').map((node) => node.props['data-io']), ['90000', '60300000'])
   out.unmount()
 })
 
@@ -1026,7 +1022,7 @@ await test('chart grouping switches between scene and model bars', async () => {
   next.buttons.find((button) => button.props['data-value'] === 'category').props.onClick()
   next = await out.rerender()
   assert.equal(next.dataValue('mode'), 'category')
-  assert.deepEqual(next.byClass('us-legend-item').map(next.textOf), ['Chat', 'Cowork', 'Code'])
+  assert.deepEqual(next.byClass('us-legend-item').map(next.textOf), ['Chat', 'Code'])
   out.unmount()
 })
 
@@ -1057,11 +1053,11 @@ await test('hovering a day shows a tooltip and mouse leave hides it', async () =
   const tooltip = next.byClass('us-tooltip')
   assert.equal(tooltip.length, 1)
   const tooltipText = next.textOf(tooltip[0])
-  // The last day spikes to scale 2: 2 000 + 240 000 + 1 100 000 = 1 342 000.
+  // The last day spikes to scale 2: 2 000 + 1 340 000 = 1 342 000.
   assert.ok(tooltipText.includes('11-12'), tooltipText)
   assert.ok(tooltipText.includes('合计'), tooltipText)
   assert.ok(tooltipText.includes('1.3M'), tooltipText)
-  assert.ok(tooltipText.includes('Cowork'), tooltipText)
+  assert.ok(tooltipText.includes('Code'), tooltipText)
   assert.equal(tooltip[0].props.style.left >= 4, true)
   const svg = next.byClass('us-chart-svg')[0]
   svg.props.onMouseLeave()
@@ -1107,7 +1103,7 @@ await test('error state offers a retry that recovers into the data view', async 
   next = await out.rerender()
   assert.equal(calls, 2)
   assert.equal(next.byClass('us-retry').length, 0)
-  assert.equal(next.byClass('us-card').length, 3)
+  assert.equal(next.byClass('us-card').length, 2)
   assert.ok(next.contains('用量统计'))
   out.unmount()
 })
@@ -1124,7 +1120,7 @@ await test('empty range renders empty chart and table copy with zero cards', asy
   const load = loadClient({ fetchImpl: fetchByDays({ empty: true }) })
   const out = await mount(load, load.model.UsageSection, { t: undefined })
   assert.equal(out.dataValue('loading'), '0')
-  assert.deepEqual(out.byClass('us-card-big').map((node) => node.children.join('')), ['0', '0', '0'])
+  assert.deepEqual(out.byClass('us-card-big').map((node) => node.children.join('')), ['0', '0'])
   assert.ok(out.contains('0 个会话'))
   assert.ok(out.contains('0 个模型'))
   assert.ok(out.contains('缓存命中率 0.0%'))
@@ -1151,7 +1147,7 @@ await test('a failed quiet refresh keeps the previous data and flags it', async 
   next.byClass('us-refresh')[0].props.onClick()
   next = await out.rerender()
   assert.equal(calls, 2)
-  assert.equal(next.byClass('us-card').length, 3, 'stale data is retained')
+  assert.equal(next.byClass('us-card').length, 2, 'stale data is retained')
   assert.ok(next.contains('刷新失败，显示上次结果'))
   assert.ok(next.contains('用量统计'))
   out.unmount()
@@ -1192,7 +1188,7 @@ await test('props.fetchReport from the slot inject is preferred over global fetc
   const out = await mount(load, load.model.UsageSection, { t: undefined, fetchReport: injected })
   assert.deepEqual(requested, [30])
   assert.equal(load.fetchCalls.length, 0)
-  assert.equal(out.byClass('us-card').length, 3)
+  assert.equal(out.byClass('us-card').length, 2)
   assert.equal(out.byClass('us-chart-wrap')[0].props['data-total'], '20130000')
   out.unmount()
 })

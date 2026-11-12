@@ -2,9 +2,9 @@
 
 > Local token usage for this machine, on the Harness settings' **Usage** page · A DeepSeek Harness plugin
 
-**English:** See where this device's tokens went: Chat, Cowork and Code cards, tokens per day, and a per-model breakdown, all folded from the local session logs the Harness already writes.
+**English:** See where this device's tokens went: Chat and Code cards, tokens per day, and a per-model breakdown, all folded from the local session logs the Harness already writes.
 
-**中文：** 看清本机的 token 花在了哪里：Chat / Cowork / Code 三张场景卡片、每日 Token 柱状图、按模型明细，全部推导自 Harness 已经写下的本地会话日志。
+**中文：** 看清本机的 token 花在了哪里：Chat / Code 两张场景卡片、每日 Token 柱状图、按模型明细，全部推导自 Harness 已经写下的本地会话日志。
 
 Everything on the page is derived from session logs DeepSeek Harness records anyway. The plugin adds no prompt, no tool and no model call, writes nothing to your sessions, and never contacts an external service — the page talks to one local route on the Harness host. The same logs always fold into the same numbers.
 
@@ -23,7 +23,7 @@ Everything on the page is derived from session logs DeepSeek Harness records any
 Open the Harness settings panel and choose **Usage** (「用量」) in the left navigation. The page is one scroll, top to bottom:
 
 1. **Title and range** — a 7 / 30 / 90 days switch, 30 days by default; changing it refetches immediately.
-2. **Three scene cards** — Chat, Cowork and Code. Each has input + output as its headline number, four detail rows — Uncached input, Output, Cache read, Cache write — and a count of the web searches its sessions made.
+2. **Two scene cards** — Chat and Code. Each has input + output as its headline number, four detail rows — Uncached input, Output, Cache read, Cache write — and a count of the web searches its sessions made.
 3. **Billing note** — provider bills cover the whole organization and charge for cached tokens, so they will not match these totals.
 4. **Tokens per day** — the bar chart, with a Scene / Model grouping switch and a per-day tooltip.
 5. **By model** — the per-model table with a share bar on every row.
@@ -33,7 +33,7 @@ A few details:
 
 - **Headline vs. detail.** A card's big number is input + output; cache is excluded, as on the reference page. Cache reads and writes are listed separately because providers bill them differently. Detail rows show exact counts with thousands separators; headlines and the chart use compact K/M/B values.
 - **Summary chips.** Under the subtitle: sessions with activity in the range, models in the range, and the cache hit rate — cache reads ÷ (input + cache reads + cache writes).
-- **Chart.** In Scene mode each day has three grouped bars — Chat, Cowork, Code — in their scene colours. In Model mode each day is one stacked bar for the six largest models plus “Other”. Five value ticks, about six date labels, and a tooltip per hovered day with each series' value and the day's total. An empty range says “No usage in this period yet”.
+- **Chart.** In Scene mode each day has two grouped bars — Chat, Code — in their scene colours. In Model mode each day is one stacked bar for the six largest models plus “Other”. Five value ticks, about six date labels, and a tooltip per hovered day with each series' value and the day's total. An empty range says “No usage in this period yet”.
 - **Table.** Rows are sorted by input + output. One model id is one row even when more than one provider served it; the providers are listed under the model name. Four columns: model, input + output, cache read, share. The input + output cell carries the exact input and output counts in its hover title; share is the model's input + output over all models in the range, drawn as a small bar plus a percentage, and a total row closes the table.
 - **Refresh and loading.** The first open shows skeletons and “Summing up this device's sessions…” while the first scan runs. After that the page polls every 10 s while it is visible, and Refresh re-requests immediately. A failed refresh keeps the last numbers and marks the footer.
 - **Theme and language.** The page follows the Harness light/dark theme and its language setting — UI copy, the settings nav label and the chart's date labels all follow the DSH language — uses the Harness' own `--dsw-*` design tokens, and turns its animation off under `prefers-reduced-motion: reduce`.
@@ -67,17 +67,16 @@ The numbers follow the Harness' own `tokenUsage` accounting rather than a second
 
 That is what lets per-session totals match the `tokenUsage` projection cache the Harness keeps (`$DSH_HOME/storages/session_projcache`); the two reconcile session by session.
 
-### What Chat, Cowork and Code mean
+### What Chat and Code mean
 
-The page this plugin takes its layout from — the Usage page in Claude desktop — splits usage into three entry points: Chat, Cowork and Code. DSH has no such entry points, so the plugin maps each session to one scene from the tools it used, Agent Teams first:
+The page this plugin takes its layout from — the Usage page in Claude desktop — splits usage by entry point. This plugin keeps two of those buckets and drops the third, because DSH has no separate Cowork product: it maps each session to one scene from the tools it used.
 
 | Card | The session used … |
 | --- | --- |
-| Cowork · Agent Teams | any Agent Teams tool: `spawn_teammate`, `send_message`, `team_task_*`, `list_agents`, `wait_agent`, `interrupt_agent` |
 | Code · code execution | any code-execution tool: `bash`, `pwsh`, `run_code`, `terminal`, `shell`, `exec`, `write`, `edit`, `apply_patch`, `str_replace*`, `fs_write`, `fs_edit`, `notebook`, `jobs`, `job_*`, `workflow`, `ralph`, `plugin_manager`, `worktree` |
-| Chat · pure conversation | neither of the above |
+| Chat · conversation | none of the code-execution tools above |
 
-A scene belongs to the whole session, not to a turn: a session that used Agent Teams anywhere is Cowork. This is a deliberate approximation of the reference split, not a claim that DSH sessions are those products. If you never use code or team tools, everything lands under Chat.
+A scene belongs to the whole session, not to a turn. Agent Teams tools (`spawn_teammate`, `send_message`, `team_task_*`, `list_agents`, `wait_agent`, `interrupt_agent`) are still recognised and recorded, but they no longer name a scene: a session that only coordinated teammates without running code counts as Chat, and a session that also ran code counts as Code. This is a deliberate approximation of the reference page, not a claim that DSH sessions are those products.
 
 ### Index cache and speed
 
@@ -124,7 +123,7 @@ Two plain-Node suites, no dependencies. `test/host.mjs` covers the zstd frame sc
 - **Only what is on disk.** The report is a snapshot of the session logs under the current `$DSH_HOME` at request time; logs that were deleted, or that live under another DSH home, are not counted.
 - **The first scan is not instant.** Its cost scales with the size of the log library — roughly 3–10 s for hundreds of megabytes — and the page shows skeletons meanwhile.
 - **Web searches are an approximation.** The count comes from `web_search`, `web_fetch`, `websearch` and `webfetch` tool calls in the logs; it is not the provider's billed search count, and searches outside DSH are invisible.
-- **Chat / Cowork / Code is a mapping.** Each session gets exactly one scene from its tools, Agent Teams first. It approximates the reference page's three entry points rather than describing those products' own usage types.
+- **Chat / Code is a mapping.** Each session gets exactly one scene from the tools it used: Code for sessions that ran a code-execution tool, Chat for everything else. It approximates the reference page's entry points rather than describing a product's own usage types.
 - **Local timezone.** Days are bucketed in the host's local timezone; travelling or a daylight-saving change rebuilds the index and can move a bar to another date (the tokens are not lost).
 - **No cost.** Prices are deliberately absent; the provider bill is the billing source of truth.
 

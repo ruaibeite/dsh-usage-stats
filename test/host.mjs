@@ -289,7 +289,7 @@ test('the module exports the SPEC §4 contract', () => {
   assert.deepEqual(RANGES, [7, 30, 90])
   assert.equal(DEFAULT_RANGE_DAYS, 30)
   assert.equal(WARMUP_DELAY_MS, 4000)
-  assert.deepEqual(CATEGORIES, ['chat', 'cowork', 'code'])
+  assert.deepEqual(CATEGORIES, ['chat', 'code'])
   assert.equal(CACHE_RELATIVE_PATH, path.join('cache', 'usage-stats', 'index.json'))
   for (const name of [
     'scanZstdFrames', 'decodeZstdFrames', 'foldLine', 'foldLines', 'foldSessionText',
@@ -520,7 +520,7 @@ test('usage validation ignores unusable samples without throwing', () => {
   assert.doesNotThrow(() => foldSessionText('not json at all\n{"type":"tool/result","seq":1,"time":1}\n'))
 })
 
-test('tool/call classifies code and team tools and counts web searches with model attribution', () => {
+test('tool/call records code and team markers and counts web searches with model attribution', () => {
   const folded = foldSessionText(sessionText([
     toolLine('web_search', 1, 1000), // no model yet -> unknown attribution
     messageLine({ usage: usageObject(1, 1), provider: 'provider-w', model: 'model-w', time: 1001 }),
@@ -528,7 +528,7 @@ test('tool/call classifies code and team tools and counts web searches with mode
     toolLine('bash', 3, 1003),
     toolLine('spawn_teammate', 4, 1004),
   ]))
-  assert.equal(folded.category, 'cowork', 'team tool wins over code tool')
+  assert.equal(folded.category, 'code', 'a code tool marks the session as code; team tools no longer name a category')
   assert.equal(folded.hasCode, true)
   assert.equal(folded.hasTeam, true)
   assert.equal(folded.webSearches, 2)
@@ -538,13 +538,13 @@ test('tool/call classifies code and team tools and counts web searches with mode
   assert.equal(day.webByModel['model-w'], 1)
 })
 
-test('categoryOfTools classifies single names and iterables, cowork wins over code', () => {
+test('categoryOfTools classifies single names and iterables; team tools are chat unless code also ran', () => {
   assert.equal(categoryOfTools(['read', 'glob']), 'chat')
   assert.equal(categoryOfTools(['bash']), 'code')
   assert.equal(categoryOfTools(['job_kill']), 'code')
-  assert.equal(categoryOfTools(['spawn_teammate']), 'cowork')
-  assert.equal(categoryOfTools(['bash', 'team_task_list']), 'cowork')
-  assert.equal(categoryOfTools(new Set(['write', 'wait_agent'])), 'cowork')
+  assert.equal(categoryOfTools(['spawn_teammate']), 'chat', 'team tools alone do not make a session code')
+  assert.equal(categoryOfTools(['bash', 'team_task_list']), 'code')
+  assert.equal(categoryOfTools(new Set(['write', 'wait_agent'])), 'code')
   assert.equal(categoryOfTools('run_code'), 'code')
   assert.equal(categoryOfTools([]), 'chat')
   assert.equal(categoryOfTools(null), 'chat')
@@ -556,7 +556,8 @@ test('categoryOfTools classifies single names and iterables, cowork wins over co
     assert.equal(categoryOfTools([name]), 'code', `${name} should be code`)
   }
   for (const name of ['spawn_teammate', 'send_message', 'team_task_list', 'list_agents', 'wait_agent', 'interrupt_agent']) {
-    assert.equal(categoryOfTools([name]), 'cowork', `${name} should be cowork`)
+    assert.equal(categoryOfTools([name]), 'chat', `${name} alone should be chat`)
+    assert.equal(categoryOfTools([name, 'bash']), 'code', `${name} with a code tool should be code`)
   }
 })
 
@@ -933,7 +934,7 @@ function fixtureIndex() {
       },
       'session-b': {
         file: '/b', size: 1, mtimeMs: 2, createdAt: 2, cwd: null,
-        category: 'cowork',
+        category: 'chat',
         models: ['model-a'],
         providers: { 'model-a': ['provider-a', 'provider-c'] },
         days: { '2026-01-02': { usage: { 'model-a': [1, 1, 10, 0] }, web: 0, webByModel: {} } },
@@ -965,8 +966,7 @@ test('aggregateReport zero-fills every day, filters the range and aggregates cat
   assert.deepEqual(empty.models, {}, 'days without data keep a zero-filled category row and no models')
 
   assert.deepEqual(report.categories.code, { input: 22, output: 4, cacheRead: 100, cacheWrite: 0, webSearches: 2, sessions: 1 })
-  assert.deepEqual(report.categories.cowork, { input: 1, output: 1, cacheRead: 10, cacheWrite: 0, webSearches: 0, sessions: 1 })
-  assert.deepEqual(report.categories.chat, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, webSearches: 0, sessions: 0 })
+  assert.deepEqual(report.categories.chat, { input: 1, output: 1, cacheRead: 10, cacheWrite: 0, webSearches: 0, sessions: 1 })
   assert.deepEqual(report.totals, {
     input: 23, output: 5, cacheRead: 110, cacheWrite: 0, webSearches: 2, sessions: 2,
   })
@@ -1072,7 +1072,7 @@ await testAsync('GET /dsh-usage-stats/report serves the frozen §4.3 payload sha
   assert.deepEqual(Object.keys(report.range).sort(), ['from', 'to'])
   assert.deepEqual(Object.keys(report.index).sort(), ['files', 'reused', 'scanned', 'sessions', 'skipped'])
   assert.deepEqual(report.index, { sessions: 3, scanned: 0, reused: 3, skipped: 0, files: 3 })
-  assert.deepEqual(Object.keys(report.categories).sort(), ['chat', 'code', 'cowork'])
+  assert.deepEqual(Object.keys(report.categories).sort(), ['chat', 'code'])
   const categoryKeys = ['cacheRead', 'cacheWrite', 'input', 'output', 'sessions', 'webSearches']
   for (const category of CATEGORIES) assert.deepEqual(Object.keys(report.categories[category]).sort(), categoryKeys)
   assert.deepEqual(Object.keys(report.totals).sort(), categoryKeys)
@@ -1331,7 +1331,7 @@ await testAsync('apply() integration: the registered handler serves a real temp-
       assert.equal(report.totals.input, 8)
       assert.equal(report.totals.output, 2)
       assert.equal(report.totals.cacheRead, 80)
-      assert.equal(report.categories.chat.input, 8, 'a session without code/team tools is a chat session')
+      assert.equal(report.categories.chat.input, 8, 'a session without code tools is a chat session')
       assert.equal(report.daily.length, 7)
       assert.equal(existsSync(path.join(home, CACHE_RELATIVE_PATH)), true, 'the route populated the temp cache')
       effectByLabel(ctx, 'usage-stats: index warmup').dispose()
@@ -1369,7 +1369,7 @@ const REAL_SESSIONS = path.join(REAL_HOME, 'sessions')
 const REAL_PROJCACHE = path.join(REAL_HOME, 'storages', 'session_projcache', 'sessions')
 const REAL_DATA = existsSync(REAL_SESSIONS) && existsSync(REAL_PROJCACHE)
 
-const reportSample = { chat: null, cowork: null, code: null, totals: null }
+const reportSample = { chat: null, code: null, totals: null }
 let realFirstMs = null
 let realSecondMs = null
 
@@ -1439,7 +1439,7 @@ await testAsync('real data: full scan timing and projcache tokenUsage parity (ha
       }
     }
     reportSample.totals = report.totals
-    assert.equal(report.totals.input, report.categories.chat.input + report.categories.cowork.input + report.categories.code.input)
+    assert.equal(report.totals.input, report.categories.chat.input + report.categories.code.input)
     assert.equal(report.daily.length, 30)
     assert.equal(report.models.length > 0, true)
 

@@ -2,7 +2,7 @@
  * @ruaibeite/dsh-usage-stats — browser half.
  *
  * One page in Settings: 「用量 / Usage」. It folds every session on this device
- * into three scene cards (Chat / Cowork / Code), a tokens-per-day bar chart and
+ * into two scene cards (Chat and Code), a tokens-per-day bar chart and
  * a per-model breakdown. The numbers come from the plugin's own host route
  * (`GET /dsh-usage-stats/report`), which reads the local session logs; this
  * half only renders them, switches the 7/30/90 day range, switches the chart
@@ -24,7 +24,7 @@ window.__ModuleLoader__.load({
     /** Selectable ranges, in days. */
     const RANGES = [7, 30, 90]
     /** Scene keys, in card order. */
-    const CATEGORIES = ['chat', 'cowork', 'code']
+    const CATEGORIES = ['chat', 'code']
     /** Chart series cap before the rest is merged into "其他". */
     const MODEL_SERIES_CAP = 6
     /** Quiet refresh cadence while the page is mounted. */
@@ -36,10 +36,10 @@ window.__ModuleLoader__.load({
     const TEXT = {
       zh: {
         'meta.title': '用量统计',
-        'meta.description': '本机 Token 用量：Chat/Cowork/Code 卡片、每日柱状图与按模型明细，全部推导自本地会话日志。',
+        'meta.description': '本机 Token 用量：Chat / Code 两张场景卡片、每日柱状图与按模型明细，全部推导自本地会话日志。',
         'nav': '用量',
         'title': '用量统计',
-        'subtitle': '本设备的 Token 用量，跨 Chat、Cowork 与 Code。费用不显示 —— 计费以服务商账单为准。',
+        'subtitle': '本设备的 Token 用量，分 Chat 与 Code。费用不显示 —— 计费以服务商账单为准。',
         'summary.sessions': '{n} 个会话',
         'summary.models': '{n} 个模型',
         'summary.cacheHit': '缓存命中率 {pct}',
@@ -47,10 +47,8 @@ window.__ModuleLoader__.load({
         'range.30': '30 天',
         'range.90': '90 天',
         'cat.chat': 'Chat',
-        'cat.cowork': 'Cowork',
         'cat.code': 'Code',
-        'cat.chatHint': '纯对话',
-        'cat.coworkHint': 'Agent Teams',
+        'cat.chatHint': '对话',
         'cat.codeHint': '代码执行',
         'metric.input': '未缓存输入',
         'metric.output': '输出',
@@ -93,10 +91,10 @@ window.__ModuleLoader__.load({
       },
       en: {
         'meta.title': 'Usage stats',
-        'meta.description': 'Local token usage: Chat/Cowork/Code cards, tokens per day and a per-model breakdown, all folded from the local session logs.',
+        'meta.description': 'Local token usage: Chat and Code scene cards, tokens per day and a per-model breakdown, all folded from the local session logs.',
         'nav': 'Usage',
         'title': 'Usage',
-        'subtitle': "Token usage on this device across Chat, Cowork, and Code. Costs aren't shown — your provider bills you at its own rates.",
+        'subtitle': "Token usage on this device, split into Chat and Code. Costs aren't shown — your provider bills you at its own rates.",
         'summary.sessions': '{n} sessions',
         'summary.models': '{n} models',
         'summary.cacheHit': '{pct} cache hits',
@@ -104,10 +102,8 @@ window.__ModuleLoader__.load({
         'range.30': '30d',
         'range.90': '90d',
         'cat.chat': 'Chat',
-        'cat.cowork': 'Cowork',
         'cat.code': 'Code',
-        'cat.chatHint': 'conversation only',
-        'cat.coworkHint': 'Agent Teams',
+        'cat.chatHint': 'conversation',
         'cat.codeHint': 'code & tools',
         'metric.input': 'Uncached input',
         'metric.output': 'Output',
@@ -519,7 +515,6 @@ window.__ModuleLoader__.load({
     ]
     const SCENE_COLORS = {
       chat: 'var(--dsw-alias-state-business-primary, #4176e6)',
-      cowork: 'var(--dsw-alias-state-warn-primary, #f59e0b)',
       code: 'var(--dsw-alias-state-success-primary, #22c55e)',
     }
 
@@ -892,9 +887,10 @@ window.__ModuleLoader__.load({
               )
             }
           } else {
-            const gap = Math.min(2, groupWidth * 0.045)
-            const barWidth = clamp((groupWidth * 0.72 - gap * 2) / 3, 1.5, 12)
-            const groupInner = barWidth * 3 + gap * 2
+            const slots = Math.max(1, chart.series.length)
+            const gap = Math.min(3, groupWidth * 0.045)
+            const barWidth = clamp((groupWidth * 0.72 - gap * (slots - 1)) / slots, 1.5, 18)
+            const groupInner = barWidth * slots + gap * (slots - 1)
             const barX = groupX + (groupWidth - groupInner) / 2
             for (let s = 0; s < chart.series.length; s += 1) {
               const value = chart.series[s].values[index] || 0

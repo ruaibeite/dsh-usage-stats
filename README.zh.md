@@ -2,9 +2,9 @@
 
 > 本机 Token 用量，显示在 Harness 设置的「用量」页 · DeepSeek Harness 插件
 
-**中文：** 看清本机的 token 花在了哪里：Chat / Cowork / Code 三张场景卡片、每日 Token 柱状图、按模型明细，全部推导自 Harness 已经写下的本地会话日志。
+**中文：** 看清本机的 token 花在了哪里：Chat / Code 两张场景卡片、每日 Token 柱状图、按模型明细，全部推导自 Harness 已经写下的本地会话日志。
 
-**English:** See where this device's tokens went: Chat, Cowork and Code cards, tokens per day, and a per-model breakdown, all folded from the local session logs the Harness already writes.
+**English:** See where this device's tokens went: Chat and Code cards, tokens per day, and a per-model breakdown, all folded from the local session logs the Harness already writes.
 
 页面上的每一组数字都来自 Harness 本来就会记录的会话日志。插件不新增提示词、不注册工具、不调用模型，也不往会话里写任何东西，更不访问外部服务——页面只和 Harness 宿主上的一条本地路由打交道。同一批日志，折叠出来的数字永远一致。
 
@@ -23,7 +23,7 @@
 打开 Harness 的设置面板，在左侧导航里点「用量」（英文界面是 **Usage**）。整页自上而下：
 
 1. **标题与范围**——7 / 30 / 90 天切换，默认 30 天；切换后立即重新取数。
-2. **三张场景卡片**——Chat、Cowork、Code。每张卡片以「输入 + 输出」作大数字，下面四行明细：未缓存输入、输出、缓存读、缓存写；卡片底部是这些会话的联网搜索次数。
+2. **两张场景卡片**——Chat、Code。每张卡片以「输入 + 输出」作大数字，下面四行明细：未缓存输入、输出、缓存读、缓存写；卡片底部是这些会话的联网搜索次数。
 3. **账单口径说明**——服务商账单覆盖整个组织并计入缓存 token，所以和这里的合计对不上。
 4. **每日 Token**——柱状图，可在「场景 / 模型」之间切换分组，悬停某天看明细。
 5. **按模型**——每行一个模型，带占比条。
@@ -33,7 +33,7 @@
 
 - **大数字与明细。** 卡片大数字是「输入 + 输出」，不含缓存，和参考页一致；缓存读、缓存写单列，因为服务商对它们的计费方式不同。明细行显示带千分位的精确值，大数字与图表用 K/M/B 简写。
 - **摘要小字。** 副标题下方三枚：范围内有活动的会话数、范围内的模型数、缓存命中率——缓存读 ÷（输入 + 缓存读 + 缓存写）。
-- **图表。** 场景模式下每天三根并排柱（Chat / Cowork / Code），各用场景色；模型模式下每天一根堆叠柱，取总量前六的模型加「其他」。Y 轴五条刻度线，X 轴约六个日期标签；悬停某天显示各序列的值与当天合计；范围内没有数据时显示「这段时间还没有用量」。
+- **图表。** 场景模式下每天两根并排柱（Chat / Code），各用场景色；模型模式下每天一根堆叠柱，取总量前六的模型加「其他」。Y 轴五条刻度线，X 轴约六个日期标签；悬停某天显示各序列的值与当天合计；范围内没有数据时显示「这段时间还没有用量」。
 - **表格。** 按「输入 + 输出」降序。同一个模型 id 即使由多个供应商服务也只占一行，供应商列在模型名下方；共四列：模型、「输入 + 输出」、缓存读、占比。「输入 + 输出」单元格的悬停提示里保留输入与输出的精确值；占比 = 该模型的「输入 + 输出」÷ 范围内全部模型，画成小条加百分比；表格末尾有一行合计。
 - **刷新与加载。** 首次打开显示骨架卡片和「正在汇总本机会话…」，等第一次扫描完成；之后页面在可见时每 10 秒轮询一次，「刷新」立即重取。刷新失败会保留上次数字，并在页脚标注。
 - **主题与语言。** 页面跟随 Harness 的深浅色主题与语言设置——界面文案、设置导航里的「用量 / Usage」和图表日期标签都随 DSH 语言变化——只用 Harness 自己的 `--dsw-*` 设计 token；在 `prefers-reduced-motion: reduce` 下关闭动画。
@@ -67,17 +67,16 @@ Harness 的 JSONL 后端把每个 flush 批次压成一个独立的 zstd 帧再�
 
 正因如此，逐会话总量与 Harness 维护的 `tokenUsage` 投影缓存（`$DSH_HOME/storages/session_projcache`）一致：两边逐会话对账吻合。
 
-### Chat、Cowork、Code 分别是什么
+### Chat、Code 分别是什么
 
-这个页面的布局参考 Claude 桌面版的 Usage 页，它把用量分成 Chat、Cowork、Code 三个入口。DSH 没有这些入口，所以插件按会话用过的工具，把每个会话归到一个场景，Agent Teams 优先：
+这个页面的布局参考 Claude 桌面版的 Usage 页。插件只保留两个场景，因为 DSH 里没有独立的 Cowork 入口；每个会话按用过的工具归入其中一个：
 
 | 卡片 | 会话用过…… |
 | --- | --- |
-| Cowork · Agent Teams | 任一 Agent Teams 工具：`spawn_teammate`、`send_message`、`team_task_*`、`list_agents`、`wait_agent`、`interrupt_agent` |
 | Code · 代码执行 | 任一代码执行工具：`bash`、`pwsh`、`run_code`、`terminal`、`shell`、`exec`、`write`、`edit`、`apply_patch`、`str_replace*`、`fs_write`、`fs_edit`、`notebook`、`jobs`、`job_*`、`workflow`、`ralph`、`plugin_manager`、`worktree` |
-| Chat · 纯对话 | 上面两类都没有 |
+| Chat · 对话 | 上面这些代码执行工具一个都没用过 |
 
-场景属于整个会话，而不属于某一轮：只要会话里任何一处用过 Agent Teams，它就归为 Cowork。这是对参考页三入口的近似，不是说 DSH 会话就是那三样东西。如果你从不使用代码或团队工具，所有用量都会落在 Chat 里。
+场景属于整个会话，而不属于某一轮。Agent Teams 工具（`spawn_teammate`、`send_message`、`team_task_*`、`list_agents`、`wait_agent`、`interrupt_agent`）仍然会被识别并记录，但不再单独成一个场景：只协调团队、自己没跑代码的会话计入 Chat，跑过代码的计入 Code。这是对参考页的近似，不是说 DSH 会话就是那些产品。
 
 ### 索引缓存与速度
 
@@ -124,7 +123,7 @@ npm test
 - **只有磁盘上有的。** 报告是请求时刻当前 `$DSH_HOME` 会话日志的快照；被删掉的日志、或位于另一个 DSH home 的日志不会计入。
 - **首次扫描不是瞬间。** 耗时随日志库大小增长——几百 MB 的库通常需要 3–10 秒，期间页面显示骨架。
 - **联网搜索是近似值。** 数字来自日志里的 `web_search`、`web_fetch`、`websearch`、`webfetch` 工具调用，不等于服务商计费的搜索次数；在 DSH 之外发生的搜索也看不到。
-- **Chat / Cowork / Code 是映射。** 每个会话按用过的工具、Agent Teams 优先，只归入一个场景；它近似参考页的三个入口，而不是那三个产品的真实用量分类。
+- **Chat / Code 是映射。** 每个会话按用过的工具只归入一个场景：跑过代码执行工具的是 Code，其余都是 Chat。它近似参考页的入口划分，而不是某个产品的真实用量分类。
 - **本地时区。** 按天分桶使用宿主本地时区；出行或夏令时变化会触发整库重建，可能让某一天的柱子换到另一个日期（token 不会丢）。
 - **不显示费用。** 这是有意的；对账以服务商账单为准。
 

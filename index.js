@@ -41,8 +41,8 @@ export const RANGES = [7, 30, 90]
 /** Default report range in days. */
 export const DEFAULT_RANGE_DAYS = 30
 
-/** Session categories, in display order. */
-export const CATEGORIES = ['chat', 'cowork', 'code']
+/** Session categories, in display order: conversation, then code work. */
+export const CATEGORIES = ['chat', 'code']
 
 /** Delay before the background index warm-up fires after activation. */
 export const WARMUP_DELAY_MS = 4000
@@ -306,32 +306,34 @@ const RE_CWD = /"cwd":"((?:[^"\\]|\\.)*)"/
 /** Tools that make a session "code" (code execution / filesystem mutation). */
 export const CODE_TOOL_PATTERN = /^(bash|pwsh|run_code|terminal|shell|exec|write|edit|apply_patch|str_replace|fs_write|fs_edit|notebook|jobs|job_|workflow|ralph|plugin_manager|worktree)/
 
-/** Tools that make a session "cowork" (Agent Teams). */
+/** Tools that make a session "cowork" (Agent Teams) — recorded, no category of its own. */
 export const TEAM_TOOL_PATTERN = /^(spawn_teammate|send_message|team_task_|list_agents|wait_agent|interrupt_agent)/
 
 /** Tools counted as web searches and attributed to the most recent model. */
 export const WEB_TOOL_PATTERN = /^(web_search|web_fetch|websearch|webfetch)/
 
 /**
- * Scenario category of a session from its tool names. Cowork wins over code:
- * an Agent Teams session that also runs code is still a Cowork session.
+ * Scenario category of a session from its tool names: a session that ran any
+ * code-execution tool is `code`, everything else is `chat`.
+ *
+ * Agent Teams tools are recorded separately (`hasTeam`) but no longer name a
+ * category: a session that only coordinated teammates without running code is
+ * counted as chat, because the two cards are "conversation" and "code work".
  *
  * @param toolNames - one tool name or any iterable of names.
- * @returns `cowork`, `code` or `chat`.
+ * @returns `code` or `chat`.
  */
 export function categoryOfTools(toolNames) {
   let hasCode = false
-  let hasTeam = false
   const consume = (name) => {
     if (typeof name !== 'string' || name === '') return
-    if (!hasTeam && TEAM_TOOL_PATTERN.test(name)) hasTeam = true
     if (!hasCode && CODE_TOOL_PATTERN.test(name)) hasCode = true
   }
   if (typeof toolNames === 'string') consume(toolNames)
   else if (toolNames !== null && toolNames !== undefined && typeof toolNames[Symbol.iterator] === 'function') {
     for (const name of toolNames) consume(name)
   }
-  return hasTeam ? 'cowork' : hasCode ? 'code' : 'chat'
+  return hasCode ? 'code' : 'chat'
 }
 
 /** Copy a usage object's four buckets; `null` when it is not a usable sample. */
@@ -649,7 +651,7 @@ function finishSessionFold(state) {
   return {
     createdAt: state.createdAt,
     cwd: state.cwd,
-    category: state.hasTeam ? 'cowork' : state.hasCode ? 'code' : 'chat',
+    category: state.hasCode ? 'code' : 'chat',
     models: Object.keys(providerObject),
     providers: providerObject,
     days: daysObject,

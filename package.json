@@ -2,7 +2,7 @@
   "name": "@ruaibeite/dsh-usage-stats",
   "version": "0.1.0",
   "type": "module",
-  "description": "Device-wide token usage for this Harness: Chat/Cowork/Code cards, tokens per day, and a per-model breakdown, folded from the local session logs on the settings Usage page.",
+  "description": "Device-wide token usage for this Harness: Chat and Code scene cards, tokens per day, and a per-model breakdown, folded from the local session logs on the settings Usage page.",
   "license": "MIT",
   "exports": {
     ".": "./index.js",
